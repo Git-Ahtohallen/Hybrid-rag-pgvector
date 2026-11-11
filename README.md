@@ -40,7 +40,7 @@ Tests that need the database are marked `db` and are skipped when `DATABASE_URL`
 
 ## Roadmap
 
-- [ ] Project setup, Postgres + pgvector, schema migrations
+- [x] Project setup, Postgres + pgvector, schema migrations
 - [ ] Synthetic clinical documents and ingestion with chunking
 - [ ] Vector search
 - [ ] Full-text search
