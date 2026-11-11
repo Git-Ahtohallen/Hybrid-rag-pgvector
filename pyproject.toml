@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hybrid-rag-pgvector"
+version = "0.1.0"
+description = "Hybrid retrieval (pgvector + Postgres full-text) that keeps sensitive data inside one Postgres boundary."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = [
+  "psycopg[binary]>=3.2",
+  "pgvector>=0.3",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.8",
+  "mypy>=1.13",
+]
+
+[project.scripts]
+hybrid-rag = "hybrid_rag.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hybrid_rag"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["db: needs a Postgres database with pgvector (set DATABASE_URL)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+packages = ["hybrid_rag"]
+
+[[tool.mypy.overrides]]
+module = ["pgvector.*"]
+ignore_missing_imports = true
