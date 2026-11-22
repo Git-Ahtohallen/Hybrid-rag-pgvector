@@ -38,10 +38,29 @@ All sample data in this repo is **synthetic**. No real patient data is used.
 
 Tests that need the database are marked `db` and are skipped when `DATABASE_URL` is not set.
 
+## Synthetic data and ingestion
+
+```bash
+hybrid-rag generate data/notes.jsonl --count 50   # write synthetic visit notes to JSONL
+hybrid-rag ingest --file data/notes.jsonl         # or just `hybrid-rag ingest --count 50`
+```
+
+- **Synthetic visit notes** (`hybrid_rag.synthetic`): outpatient notes for made-up patients
+  (`SYN-00001`, ...) with real ICD-10-CM codes (`E11.9`, `I10`, `J45.909`, ...), CPT codes
+  (`99214`, `83036`, ...) and drug names with doses. The same seed always gives the same notes.
+- **Chunking** (`hybrid_rag.chunking`): packs paragraphs into chunks of up to `--max-chars`
+  (default 1000), splitting long paragraphs at sentence boundaries, with `--overlap-chars`
+  (default 150) carried into the next chunk.
+- **Embeddings** (`hybrid_rag.embedding`): an `Embedder` interface and a dependency-free
+  `HashingEmbedder` (hashed unigrams and bigrams, 384 dimensions) so ingestion runs offline and in
+  CI. It measures word overlap, not meaning; a neural embedder plugs into the same interface later.
+- **Ingestion** (`hybrid_rag.ingest`): one transaction per run, upserts documents by
+  `external_id` and replaces their chunks, so re-running never duplicates rows.
+
 ## Roadmap
 
 - [x] Project setup, Postgres + pgvector, schema migrations
-- [ ] Synthetic clinical documents and ingestion with chunking
+- [x] Synthetic clinical documents and ingestion with chunking
 - [ ] Vector search
 - [ ] Full-text search
 - [ ] Hybrid ranking and a FastAPI search endpoint
