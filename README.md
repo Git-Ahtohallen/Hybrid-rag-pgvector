@@ -51,17 +51,41 @@ hybrid-rag ingest --file data/notes.jsonl         # or just `hybrid-rag ingest -
 - **Chunking** (`hybrid_rag.chunking`): packs paragraphs into chunks of up to `--max-chars`
   (default 1000), splitting long paragraphs at sentence boundaries, with `--overlap-chars`
   (default 150) carried into the next chunk.
-- **Embeddings** (`hybrid_rag.embedding`): an `Embedder` interface and a dependency-free
-  `HashingEmbedder` (hashed unigrams and bigrams, 384 dimensions) so ingestion runs offline and in
-  CI. It measures word overlap, not meaning; a neural embedder plugs into the same interface later.
+- **Embeddings** (`hybrid_rag.embedding`): an `Embedder` interface with two implementations, both
+  384 dimensions:
+  - `HashingEmbedder` (`--embedder hashing`, the default): hashed unigrams and bigrams, no
+    dependencies, so ingestion runs offline and in CI. It measures word overlap, not meaning.
+  - `SentenceTransformerEmbedder` (`--embedder minilm`): the neural
+    [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) model.
+    Install it with `pip install -e ".[neural]"`. The model is downloaded on first use.
 - **Ingestion** (`hybrid_rag.ingest`): one transaction per run, upserts documents by
   `external_id` and replaces their chunks, so re-running never duplicates rows.
+
+## Vector search
+
+```bash
+pip install -e ".[neural]"
+hybrid-rag ingest --embedder minilm
+hybrid-rag search "chest pain when climbing stairs" -k 5 --embedder minilm
+```
+
+`hybrid_rag.search.vector_search(conn, query, embedder, k=5)` embeds the query and returns the `k`
+closest chunks by cosine similarity, using pgvector's `<=>` operator and the HNSW index. Each hit
+has the chunk text, its document's `external_id` and title, and a `score` (cosine similarity,
+higher is closer).
+
+Each chunk stores the name of the embedder that produced it (`chunks.embedding_model`). Vectors
+from different models aren't comparable, so ingestion refuses to mix models, and search refuses a
+query embedder that doesn't match the stored chunks. To switch models, delete the documents and
+ingest again.
+
+Tests that need the real model are marked `neural` and skipped when the extra isn't installed.
 
 ## Roadmap
 
 - [x] Project setup, Postgres + pgvector, schema migrations
 - [x] Synthetic clinical documents and ingestion with chunking
-- [ ] Vector search
+- [x] Vector search
 - [ ] Full-text search
 - [ ] Hybrid ranking and a FastAPI search endpoint
 - [ ] Retrieval evals (recall@k) and results table
