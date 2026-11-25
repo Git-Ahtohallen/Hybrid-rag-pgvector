@@ -5,7 +5,14 @@ import pytest
 from hybrid_rag.config import EMBEDDING_DIM
 from hybrid_rag.embedding import HashingEmbedder, SentenceTransformerEmbedder
 
-pytest.importorskip("sentence_transformers")
+try:
+    import sentence_transformers  # noqa: F401
+except (ImportError, OSError) as exc:
+    # OSError: torch is installed but its native libraries fail to load (on Windows,
+    # usually an outdated Visual C++ runtime). Skip with the reason instead of
+    # aborting collection of the whole suite.
+    pytest.skip(f"sentence-transformers unavailable: {exc}", allow_module_level=True)
+
 pytestmark = pytest.mark.neural
 
 
