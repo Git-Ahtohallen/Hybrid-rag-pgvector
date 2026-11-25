@@ -3,6 +3,10 @@
 Ingestion is idempotent per document: a document whose `external_id` already exists is
 updated in place and its chunks are replaced, so re-running ingestion never duplicates
 rows. All documents in one call are written in a single transaction.
+
+All chunks in the database must come from one embedder, because vectors from different
+models are not comparable. Ingesting with a different embedder than the stored chunks is
+refused; delete the existing documents first to switch models.
 """
 
 from __future__ import annotations
@@ -40,6 +44,15 @@ def ingest_documents(
         )
     n_docs = n_chunks = 0
     with conn.transaction(), conn.cursor() as cur:
+        other = cur.execute(
+            "SELECT embedding_model FROM chunks WHERE embedding_model <> %s LIMIT 1",
+            (embedder.name,),
+        ).fetchone()
+        if other is not None:
+            raise ValueError(
+                f"the database holds chunks embedded with {other[0]!r}, not {embedder.name!r}; "
+                "delete the existing documents before switching embedders"
+            )
         for doc in docs:
             chunks = chunk_text(doc.text, max_chars=max_chars, overlap_chars=overlap_chars)
             vectors = embedder.embed(chunks)
@@ -60,10 +73,11 @@ def ingest_documents(
             doc_id = row[0]
             cur.execute("DELETE FROM chunks WHERE document_id = %s", (doc_id,))
             cur.executemany(
-                "INSERT INTO chunks (document_id, chunk_index, content, embedding) "
-                "VALUES (%s, %s, %s, %s)",
+                "INSERT INTO chunks"
+                " (document_id, chunk_index, content, embedding, embedding_model)"
+                " VALUES (%s, %s, %s, %s, %s)",
                 [
-                    (doc_id, i, text, vec)
+                    (doc_id, i, text, vec, embedder.name)
                     for i, (text, vec) in enumerate(zip(chunks, vectors, strict=True))
                 ],
             )
