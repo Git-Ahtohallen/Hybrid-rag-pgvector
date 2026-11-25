@@ -17,6 +17,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+neural = [
+  "sentence-transformers>=3",
+]
 dev = [
   "pytest>=8.3",
   "ruff>=0.8",
@@ -31,7 +34,10 @@ packages = ["src/hybrid_rag"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["db: needs a Postgres database with pgvector (set DATABASE_URL)"]
+markers = [
+  "db: needs a Postgres database with pgvector (set DATABASE_URL)",
+  "neural: needs the neural extra and downloads all-MiniLM-L6-v2 on first run",
+]
 
 [tool.ruff]
 line-length = 100
@@ -50,3 +56,9 @@ packages = ["hybrid_rag"]
 [[tool.mypy.overrides]]
 module = ["pgvector.*"]
 ignore_missing_imports = true
+
+# Optional dependency, absent in CI; treat it as untyped so local and CI runs agree.
+[[tool.mypy.overrides]]
+module = ["sentence_transformers", "sentence_transformers.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
